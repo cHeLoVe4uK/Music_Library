@@ -18,10 +18,10 @@ func (api *API) configureRouterField() {
 	router := gin.Default()
 	apiGroup := router.Group("/api")
 	apiGroup.GET("/songs", api.GetSongs)
-	apiGroup.GET("/songs/text", api.GetSongText)
-	apiGroup.DELETE("/songs", api.DeleteSong)
-	apiGroup.PUT("/songs", api.UpdateSong)
-	apiGroup.POST("/songs", api.AddSong)
+	apiGroup.GET("/song/text", api.GetSongText)
+	apiGroup.DELETE("/song", api.DeleteSong)
+	apiGroup.PUT("/song", api.UpdateSong)
+	apiGroup.POST("/song", api.AddSong)
 
 	api.router = router
 }

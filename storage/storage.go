@@ -55,11 +55,7 @@ func (storage *Storage) CreateTable() error {
 	ctx := context.Background()
 
 	err := migrations.Up(ctx, storage.db)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // Метод, создающий публичный репозиторий для Song

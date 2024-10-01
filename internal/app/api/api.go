@@ -51,6 +51,6 @@ func (api *API) StartServer() {
 	// Запускаем сервер
 	err := api.router.Run(":" + os.Getenv("BIND_ADDR"))
 	if err != nil {
-		log.Fatal("Server work is over because: ", err)
+		log.Fatal("Server work is over because of: ", err)
 	}
 }
