@@ -1,8 +1,10 @@
 package api
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,39 +22,49 @@ func (a *API) DeleteSong(c *gin.Context) {
 
 	// Парсим query string
 	var qSong queryStringSong
-	err := c.Bind(&qSong)
-	// Проводим проверки что query string предоставленный пользователем удовлетворяет условиям для данного хэндлера
-	if err != nil || qSong.Group == "" || qSong.Song == "" {
-		a.logger.Error("User provide uncorrected query string in url")
+	err := c.ShouldBindQuery(&qSong)
+	// Проверка query string (удовлетворяет ли она условиям данного хэндлера)
+	if err != nil {
+		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
+		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		return
+	}
+	if qSong.Group == "" || qSong.Song == "" {
+		a.logger.Error("User provide uncorrected query string in url: group or song is empty")
 		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: group and song value must be not empty"})
 		return
 	}
 
-	// Ищем песню в БД
-	ok, err := a.storage.Song().CheckSong(qSong.Group, qSong.Song)
-	if err != nil {
-		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table music): %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
-		return
-	}
+	// Логируем обращение к БД
+	a.logger.Debug("Sending a request to DB: CheckSong")
 
+	// Ищем песню в БД
+	err = a.storage.Song().CheckSong(qSong.Group, qSong.Song)
 	// Если песня не найдена
-	if !ok {
-		a.logger.Info("User trying to delete non existed song")
+	if err != nil && err == sql.ErrNoRows {
+		a.logger.Info(fmt.Sprintf("User trying to delete non existed song. Group: %s, song: %s", qSong.Group, qSong.Song))
 		c.JSON(http.StatusBadRequest, ResponceMessage{"You trying to delete non existed song"})
 		return
 	}
-
-	// Если песня была найдена удаляем ее
-	err = a.storage.Song().DeleteSong(qSong.Group, qSong.Song)
 	if err != nil {
-		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table music): %s", err))
+		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
 		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
 		return
 	}
 
-	// Если все прошло хорошо, формируем ответ пользователю
-	c.JSON(http.StatusOK, ResponceMessage{fmt.Sprintf("Song with name: %s, group: %s successfully delete", qSong.Song, qSong.Group)})
+	// Логируем обращение к БД
+	a.logger.Debug("Sending a request to DB: DeleteSong")
+
+	// Если песня найдена, то удаляем ее
+	err = a.storage.Song().DeleteSong(qSong.Group, qSong.Song)
+	if err != nil {
+		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
+		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		return
+	}
+
+	// Возвращаем пользователю сообщение об успешно выполненной операции
+	c.JSON(http.StatusOK, ResponceMessage{fmt.Sprintf("Song successfully delete. Group: %s, song: %s", qSong.Group, qSong.Song)})
 
 	// Логируем окончание запроса
 	a.logger.Info("Request 'DELETE: DeleteSong api/song' successfully done")

@@ -23,6 +23,8 @@ func (api *API) configureRouterField() {
 	apiGroup.PUT("/song", api.UpdateSong)
 	apiGroup.POST("/song", api.AddSong)
 
+	router.GET("/info", api.MockInfo)
+
 	api.router = router
 }
 

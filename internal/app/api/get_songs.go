@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"mus_lib/internal/app/models"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,7 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Модель со всей информацией о песне, включая смещение и лимит количества результатов, возвращаемых в этом хэндлере
+// Модель ответа пользователю для возвращения песен
+type ResponceAllSongs struct {
+	Songs []*models.Song `json:"songs"`
+}
+
+// Модель со всей информацией о песне, включая смещение и лимит количества возвращаемых результатов из БД (для работы с query string)
 type queryStringAllSongs struct {
 	Group       string `form:"group"`
 	Song        string `form:"song"`
@@ -28,10 +34,15 @@ func (a *API) GetSongs(c *gin.Context) {
 
 	// Парсим query string
 	var aSongs queryStringAllSongs
-	err := c.Bind(&aSongs)
-	// Проводим проверки что query string предоставленный пользователем удовлетворяет условиям для данного хэндлера
-	if err != nil || aSongs.Offset == "" || aSongs.Limit == "" {
-		a.logger.Error("User provide uncorrected query string in url")
+	err := c.ShouldBindQuery(&aSongs)
+	// Проверка query string (удовлетворяет ли она условиям данного хэндлера)
+	if err != nil {
+		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
+		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		return
+	}
+	if aSongs.Offset == "" || aSongs.Limit == "" {
+		a.logger.Error("User provide uncorrected query string in url: offset or limit is empty")
 		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: offset and limit value must be not empty"})
 		return
 	}
@@ -39,7 +50,7 @@ func (a *API) GetSongs(c *gin.Context) {
 	// Считываем значения смещения
 	offsetVal, err := strconv.Atoi(aSongs.Offset)
 	if err != nil {
-		a.logger.Error("User provide uncorrected offset value in url")
+		a.logger.Error(fmt.Sprintf("User provide uncorrected offset value in url: %s", err))
 		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: offset value must be a number"})
 		return
 	}
@@ -47,12 +58,12 @@ func (a *API) GetSongs(c *gin.Context) {
 	// Считываем значения лимита
 	limitVal, err := strconv.Atoi(aSongs.Limit)
 	if err != nil {
-		a.logger.Error("User provide uncorrected limit value in url")
+		a.logger.Error(fmt.Sprintf("User provide uncorrected limit value in url: %s", err))
 		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: limit value must be a number"})
 		return
 	}
 
-	// Далее формируем запрос в БД
+	// Формируем запрос в БД
 	query, err := createQueryDB(aSongs, offsetVal, limitVal)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Failed to generate a query for the DB: %s", err))
@@ -60,15 +71,19 @@ func (a *API) GetSongs(c *gin.Context) {
 		return
 	}
 
+	// Логируем получившийся запрос (может пригодиться) и обращение к БД
+	a.logger.Debug(query)
+	a.logger.Debug("Sending a request to DB: GetSongs")
+
 	// Выполняем запрос в БД
 	songs, err := a.storage.Song().GetSongs(query)
 	if err != nil {
-		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table music): %s", err))
+		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
 		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
 		return
 	}
 
-	// Если все прошло хорошо, формируем ответ пользователю
+	// Возвращаем пользователю сообщение об успешно выполненной операции (Текст песни по сути будет преобразован в читаемый вид на стороне фронта)
 	c.JSON(http.StatusOK, ResponceAllSongs{Songs: songs})
 
 	// Логируем окончание запроса
@@ -77,67 +92,56 @@ func (a *API) GetSongs(c *gin.Context) {
 
 // Функция для формирования запроса в БД на получение данных библиотеки в зависимости от входящих параметров фильтрации и пагинации
 func createQueryDB(song queryStringAllSongs, offset, limit int) (string, error) {
-	var queryDB strings.Builder
-	var err error
-	_, err = queryDB.WriteString(fmt.Sprintf("SELECT * FROM %s ", os.Getenv("TABLE_NAME")))
+	// Подготавливаем необходимые переменные
+	var (
+		queryDB          strings.Builder
+		err              error
+		whereExpressions []string
+	)
+
+	// Формируем основу запроса для БД
+	_, err = queryDB.WriteString(fmt.Sprintf(`SELECT "group", song, releaseDate, string_to_array(array_to_string(text, E'\n\n'), E'\n\n') as text, link FROM %s `, os.Getenv("TABLE_NAME")))
 	if err != nil {
 		return "", err
 	}
+
+	// Считываем параметры, присутствующие в query string
 	if song.Group != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("WHERE group=%s ", song.Group))
-		if err != nil {
-			return "", err
-		}
+		whereExpressions = append(whereExpressions, `"group"=`+song.Group)
 	}
-	if song.Song != "" && song.Group != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("& song=%s ", song.Song))
-		if err != nil {
-			return "", err
-		}
-	} else if song.Song != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("WHERE song=%s ", song.Song))
-		if err != nil {
-			return "", err
-		}
+	if song.Song != "" {
+		whereExpressions = append(whereExpressions, "song="+song.Song)
 	}
-	if song.ReleaseDate != "" && (song.Group != "" || song.Song != "") {
-		_, err = queryDB.WriteString(fmt.Sprintf("& releaseDate=%s ", song.ReleaseDate))
-		if err != nil {
-			return "", err
-		}
-	} else if song.ReleaseDate != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("WHERE releaseDate=%s ", song.ReleaseDate))
-		if err != nil {
-			return "", err
-		}
+	if song.ReleaseDate != "" {
+		whereExpressions = append(whereExpressions, "releaseDate="+song.ReleaseDate)
 	}
-	if song.Text != "" && (song.Group != "" || song.Song != "" || song.ReleaseDate != "") {
-		_, err = queryDB.WriteString(fmt.Sprintf("& ARRAY_TO_STRING(text) LIKE '%%%s%%' ", song.Text))
-		if err != nil {
-			return "", err
-		}
-	} else if song.Text != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("WHERE ARRAY_TO_STRING(text) LIKE '%%%s%%' ", song.Text))
-		if err != nil {
-			return "", err
-		}
+	if song.Text != "" {
+		whereExpressions = append(whereExpressions, fmt.Sprintf("array_to_string(text, '') LIKE '%%%s%%' ", song.Text))
 	}
-	if song.Link != "" && (song.Group != "" || song.Song != "" || song.ReleaseDate != "" || song.Text != "") {
-		_, err = queryDB.WriteString(fmt.Sprintf("& link=%s ", song.Link))
-		if err != nil {
-			return "", err
+	if song.Link != "" {
+		whereExpressions = append(whereExpressions, "releaseDate="+song.Link)
+	}
+
+	// Проходимся по этим параметрам, чтобы правильно сформировать запрос
+	for i := range whereExpressions {
+		whereExpression := whereExpressions[i]
+		if i == 0 {
+			whereExpression = "WHERE " + whereExpression
+		} else {
+			whereExpression = "AND  " + whereExpression
 		}
-	} else if song.Link != "" {
-		_, err = queryDB.WriteString(fmt.Sprintf("WHERE link=%s ", song.Link))
+		_, err = queryDB.WriteString(whereExpression)
 		if err != nil {
 			return "", err
 		}
 	}
 
+	// Заканчиваем формирование запроса
 	_, err = queryDB.WriteString(fmt.Sprintf("OFFSET %v LIMIT %v", offset, limit))
 	if err != nil {
 		return "", err
 	}
 
+	// Возвращаем запрос
 	return queryDB.String(), nil
 }
