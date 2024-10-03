@@ -15,6 +15,16 @@ type queryStringSong struct {
 	Song  string `form:"song"`
 }
 
+// DeleteSong godoc
+// @Summary Delete song on given info
+// @Produce json
+// @Param group path string true "Name of group"
+// @Param song path string true "Name of song"
+// @Success 200 {object} ResponceMessage
+// @Failure 400 {object} ResponceMessage
+// @Failure 500 {object} ResponceMessage
+// @Router /api/song [delete]
+
 // Хэндлер для удаления песни
 func (a *API) DeleteSong(c *gin.Context) {
 	// Логируем начало выполнение запроса

@@ -9,6 +9,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UpdateSong godoc
+// @Summary Update song on given info
+// @Accept json
+// @Produce json
+// @Param group path string true "Name of group"
+// @Param song path string true "Name of song"
+// @Param group body string true "Name of group"
+// @Param song body string true "Name of song"
+// @Success 200 {object} ResponceMessage
+// @Failure 400 {object} ResponceMessage
+// @Failure 500 {object} ResponceMessage
+// @Router /api/song [put]
+
 // Хэндлер для изменения песни
 func (a *API) UpdateSong(c *gin.Context) {
 	// Логируем начало выполнение запроса

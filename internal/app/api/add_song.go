@@ -23,6 +23,17 @@ type requestBodySong struct {
 	Song  string `json:"song"`
 }
 
+// AddSong godoc
+// @Summary Create song on given info
+// @Accept json
+// @Produce json
+// @Param group body string true "Name of group"
+// @Param song body string true "Name of song"
+// @Success 200 {object} ResponceMessage
+// @Failure 400 {object} ResponceMessage
+// @Failure 500 {object} ResponceMessage
+// @Router /api/song [post]
+
 // Модель с детальной информацией о песне, принимаемой со стороннего API (для работы с responce body)
 type externalSong struct {
 	ReleaseDate string `json:"releaseDate,omitempty"`

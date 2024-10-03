@@ -27,6 +27,19 @@ type queryStringAllSongs struct {
 	Limit       string `form:"limit,omitempty"`
 }
 
+// GetSongs godoc
+// @Summary Retrieve songs in verses on given info
+// @Produce json
+// @Param offset path integer true "Offset from the beginning of the list extracted songs"
+// @Param limit path integer true "Limit of quantity extracted songs"
+// @Param releaseDate path string "Release date of song"
+// @Param text path string "Words that will be used to search for songs"
+// @Param link path string "Link of song on youtube"
+// @Success 200 {object} models.Song
+// @Failure 400 {object} ResponceMessage
+// @Failure 500 {object} ResponceMessage
+// @Router /api/songs [get]
+
 // Хэндлер для получения песен
 func (a *API) GetSongs(c *gin.Context) {
 	// Логируем начало выполнение запроса

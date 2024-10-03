@@ -8,6 +8,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title Music Library
+// @version 1.0
+
+// @license.url https://github.com/MartinHeinz/go-project-blueprint/blob/master/LICENSE
+
+// @BasePath /api
+
 func init() {
 	// Считываем переменные окружения
 	err := godotenv.Load()

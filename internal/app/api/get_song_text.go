@@ -23,6 +23,16 @@ type queryStringSongText struct {
 	Limit  string `form:"limit"`
 }
 
+// GetSongText godoc
+// @Summary Retrieve song's text in verses on given info
+// @Produce json
+// @Param group string true "Name of group"
+// @Param song string true "Name of song"
+// @Success 200 {object} ResponceTextSong
+// @Failure 400 {object} ResponceMessage
+// @Failure 500 {object} ResponceMessage
+// @Router /api/song/text [get]
+
 // Хэндлер для получения текста песни
 func (a *API) GetSongText(c *gin.Context) {
 	// Логируем начало выполнение запроса
