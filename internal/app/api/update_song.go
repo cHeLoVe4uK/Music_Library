@@ -10,17 +10,19 @@ import (
 )
 
 // UpdateSong godoc
-// @Summary Update song on given info
-// @Accept json
-// @Produce json
-// @Param group path string true "Name of group"
-// @Param song path string true "Name of song"
-// @Param group body string true "Name of group"
-// @Param song body string true "Name of song"
-// @Success 200 {object} ResponceMessage
-// @Failure 400 {object} ResponceMessage
-// @Failure 500 {object} ResponceMessage
-// @Router /api/song [put]
+//	@Summary		UpdateSong
+//	@Tags			song
+//	@Description	Update song on given info
+//	@Accept			json
+//	@Produce		json
+//	@Param			group	path		string			true	"Name of group"
+//	@Param			song	path		string			true	"Name of song"
+//	@Param			input	body		requestBodySong	true	"New song info"
+//	@Success		200		{object}	responceMessage
+//	@Failure		400		{object}	responceMessage
+//	@Failure		404		{object}	responceMessage
+//	@Failure		500		{object}	responceMessage
+//	@Router			/song [put]
 
 // Хэндлер для изменения песни
 func (a *API) UpdateSong(c *gin.Context) {
@@ -33,12 +35,12 @@ func (a *API) UpdateSong(c *gin.Context) {
 	// Проверка query string (удовлетворяет ли она условиям данного хэндлера)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 	if qSong.Group == "" || qSong.Song == "" {
 		a.logger.Error("User provide uncorrected query string in url: group or song is empty")
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: group and song value must be not empty"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: group and song value must be not empty"})
 		return
 	}
 
@@ -48,12 +50,12 @@ func (a *API) UpdateSong(c *gin.Context) {
 	// Проверка request body (удовлетворяет ли оно условиям для данного хэндлера)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with bind request body: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 	if reqSong.Group == "" || reqSong.Song == "" {
 		a.logger.Error("User provide uncorrected JSON: group or song is empty")
-		c.JSON(http.StatusBadRequest, ResponceMessage{"You provide uncorrected JSON: group and song value must be not empty"})
+		c.JSON(http.StatusBadRequest, errorMessage{"You provide uncorrected JSON: group and song value must be not empty"})
 		return
 	}
 
@@ -65,12 +67,12 @@ func (a *API) UpdateSong(c *gin.Context) {
 	// Если песня не найдена
 	if err != nil && err == sql.ErrNoRows {
 		a.logger.Info(fmt.Sprintf("User trying to update non existed song. Group: %s, song: %s", qSong.Group, qSong.Song))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"You trying to update non existed song"})
+		c.JSON(http.StatusNotFound, errorNotFoundMessage{"You trying to update non existed song"})
 		return
 	}
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 
@@ -81,12 +83,12 @@ func (a *API) UpdateSong(c *gin.Context) {
 	err = a.storage.Song().UpdateSong(reqSong.Group, reqSong.Song, qSong.Group, qSong.Song)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 
 	// Возвращаем пользователю сообщение об успешно выполненной операции
-	c.JSON(http.StatusOK, ResponceMessage{fmt.Sprintf("Song successfully update. Group: %s, song: %s", qSong.Group, qSong.Song)})
+	c.JSON(http.StatusOK, responceMessage{fmt.Sprintf("Song successfully update. Group: %s, song: %s", qSong.Group, qSong.Song)})
 
 	// Логируем окончание запроса
 	a.logger.Info("Request 'PUT: UpdateSong api/song' successfully done")

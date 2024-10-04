@@ -4,7 +4,7 @@ import (
 	"log"
 	"log/slog"
 	"mus_lib/storage"
-
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +16,7 @@ type API struct {
 	logger  *slog.Logger     // логер который будет использоваться в процессе работы сервера
 	router  *gin.Engine      // роутер который будет использоваться в процессе работы сервера (в нашем случае используем фреймворк gin)
 	storage *storage.Storage // БД, которая будет использоваться в процессе работы сервера
+	client  *http.Client // клиент, через который будут осуществляться обращения к стороннему серверу
 }
 
 // Конструктор, возвращающий инстанс нашего сервера
@@ -32,6 +33,10 @@ func (api *API) ConfigureServer() error {
 	// Настройка поля роутер
 	api.configureRouterField()
 	api.logger.Info("Router succsessfully configured")
+
+	// Настройка поля клиент
+	api.configureClientField()
+	api.logger.Info("Client succsessfully configured")
 
 	// Настройка поля с хранилищем
 	err := api.configureStorageField()

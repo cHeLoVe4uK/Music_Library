@@ -14,12 +14,12 @@ func (a *API) MockInfo(c *gin.Context) {
 	// Проводим проверки что query string предоставленный пользователем удовлетворяет условиям для данного хэндлера
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 	if qSong.Group == "" || qSong.Song == "" {
 		a.logger.Error("User provide uncorrected query string in url: group or song is empty")
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: group and song value must be not empty"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: group and song value must be not empty"})
 		return
 	}
 

@@ -11,7 +11,7 @@ import (
 )
 
 // Модель ответа пользователю для возвращения текста песни по куплетам
-type ResponceTextSong struct {
+type responceTextSong struct {
 	Verses []string `json:"verses"`
 }
 
@@ -24,14 +24,17 @@ type queryStringSongText struct {
 }
 
 // GetSongText godoc
-// @Summary Retrieve song's text in verses on given info
-// @Produce json
-// @Param group string true "Name of group"
-// @Param song string true "Name of song"
-// @Success 200 {object} ResponceTextSong
-// @Failure 400 {object} ResponceMessage
-// @Failure 500 {object} ResponceMessage
-// @Router /api/song/text [get]
+//	@Summary		GetSongText
+//	@Tags			songs
+//	@Description	Retrieve song's text in verses on given info
+//	@Produce		json
+//	@Param			group	path		string	true	"Name of group"
+//	@Param			song	path		string	true	"Name of song"
+//	@Success		200		{object}	responceTextSong
+//	@Failure		400		{object}	responceMessage
+//	@Failure		404		{object}	responceMessage
+//	@Failure		500		{object}	responceMessage
+//	@Router			/song/text [get]
 
 // Хэндлер для получения текста песни
 func (a *API) GetSongText(c *gin.Context) {
@@ -44,12 +47,12 @@ func (a *API) GetSongText(c *gin.Context) {
 	// Проверка query string (удовлетворяет ли она условиям данного хэндлера)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 	if song.Group == "" || song.Song == "" || song.Offset == "" || song.Limit == "" {
 		a.logger.Error("User provide uncorrected query string in url: group, song, offset or limit is empty")
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: group, song, offset and limit value must be not empty"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: group, song, offset and limit value must be not empty"})
 		return
 	}
 
@@ -57,7 +60,7 @@ func (a *API) GetSongText(c *gin.Context) {
 	offsetVal, err := strconv.Atoi(song.Offset)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("User provide uncorrected offset value in url: %s", err))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: offset value must be a number"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: offset value must be a number"})
 		return
 	}
 
@@ -65,7 +68,7 @@ func (a *API) GetSongText(c *gin.Context) {
 	limitVal, err := strconv.Atoi(song.Limit)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("User provide uncorrected limit value in url: %s", err))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: limit value must be a number"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: limit value must be a number"})
 		return
 	}
 
@@ -77,12 +80,12 @@ func (a *API) GetSongText(c *gin.Context) {
 	// Если песня не найдена
 	if err != nil && err == sql.ErrNoRows {
 		a.logger.Info(fmt.Sprintf("User trying to get text of non existed song. Group: %s, song: %s", song.Group, song.Song))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"You trying to get text of non existed song"})
+		c.JSON(http.StatusNotFound, errorNotFoundMessage{"You trying to get text of non existed song"})
 		return
 	}
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 
@@ -93,13 +96,14 @@ func (a *API) GetSongText(c *gin.Context) {
 	verses, err := a.storage.Song().GetSongText(song.Group, song.Song, offsetVal, limitVal)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 
-	// Возвращаем пользователю сообщение об успешно выполненной операции (Текст песни по сути будет преобразован в читаемый вид на стороне фронта)
-	c.JSON(http.StatusOK, ResponceTextSong{Verses: verses})
+	// Возвращаем пользователю сообщение об успешно выполненной операции (предполагается, что текст песни будет преобразован в читаемый вид на стороне фронта)
+	c.JSON(http.StatusOK, responceTextSong{Verses: verses})
 
+	fmt.Println(verses)
 	// Логируем окончание запроса
 	a.logger.Info("Request 'GET: GetSongText api/song/text' successfully done")
 }

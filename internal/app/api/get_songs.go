@@ -12,7 +12,7 @@ import (
 )
 
 // Модель ответа пользователю для возвращения песен
-type ResponceAllSongs struct {
+type responceAllSongs struct {
 	Songs []*models.Song `json:"songs"`
 }
 
@@ -20,25 +20,29 @@ type ResponceAllSongs struct {
 type queryStringAllSongs struct {
 	Group       string `form:"group"`
 	Song        string `form:"song"`
-	ReleaseDate string `form:"releaseDate,omitempty"`
-	Text        string `form:"text,omitempty"`
-	Link        string `form:"link,omitempty"`
-	Offset      string `form:"offset,omitempty"`
-	Limit       string `form:"limit,omitempty"`
+	ReleaseDate string `form:"releaseDate"`
+	Text        string `form:"text"`
+	Link        string `form:"link"`
+	Offset      string `form:"offset"`
+	Limit       string `form:"limit"`
 }
 
 // GetSongs godoc
-// @Summary Retrieve songs in verses on given info
-// @Produce json
-// @Param offset path integer true "Offset from the beginning of the list extracted songs"
-// @Param limit path integer true "Limit of quantity extracted songs"
-// @Param releaseDate path string "Release date of song"
-// @Param text path string "Words that will be used to search for songs"
-// @Param link path string "Link of song on youtube"
-// @Success 200 {object} models.Song
-// @Failure 400 {object} ResponceMessage
-// @Failure 500 {object} ResponceMessage
-// @Router /api/songs [get]
+//	@Summary		GetSongs
+//	@Tags			song
+//	@Description	Retrieve songs on given info
+//	@Produce		json
+//	@Param			offset		path		integer	true	"Offset from the beginning of the list extracted songs"
+//	@Param			limit		path		integer	true	"Limit of quantity extracted songs"
+//	@Param			group		path		string	"Name of group"
+//	@Param			song		path		string	"Name of song"
+//	@Param			releaseDate	path		string	"Release date of song"
+//	@Param			text		path		string	"Words that will be used to search for songs"
+//	@Param			link		path		string	"Link of song on youtube"
+//	@Success		200			{array}		models.Song
+//	@Failure		400			{object}	responceMessage
+//	@Failure		500			{object}	responceMessage
+//	@Router			/songs [get]
 
 // Хэндлер для получения песен
 func (a *API) GetSongs(c *gin.Context) {
@@ -51,12 +55,12 @@ func (a *API) GetSongs(c *gin.Context) {
 	// Проверка query string (удовлетворяет ли она условиям данного хэндлера)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with bind query string: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 	if aSongs.Offset == "" || aSongs.Limit == "" {
 		a.logger.Error("User provide uncorrected query string in url: offset or limit is empty")
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: offset and limit value must be not empty"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: offset and limit value must be not empty"})
 		return
 	}
 
@@ -64,7 +68,7 @@ func (a *API) GetSongs(c *gin.Context) {
 	offsetVal, err := strconv.Atoi(aSongs.Offset)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("User provide uncorrected offset value in url: %s", err))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: offset value must be a number"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: offset value must be a number"})
 		return
 	}
 
@@ -72,7 +76,7 @@ func (a *API) GetSongs(c *gin.Context) {
 	limitVal, err := strconv.Atoi(aSongs.Limit)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("User provide uncorrected limit value in url: %s", err))
-		c.JSON(http.StatusBadRequest, ResponceMessage{"URL have uncorrected parameters in the query string: limit value must be a number"})
+		c.JSON(http.StatusBadRequest, errorMessage{"URL have uncorrected parameters in the query string: limit value must be a number"})
 		return
 	}
 
@@ -80,7 +84,7 @@ func (a *API) GetSongs(c *gin.Context) {
 	query, err := createQueryDB(aSongs, offsetVal, limitVal)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Failed to generate a query for the DB: %s", err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
 		return
 	}
 
@@ -92,12 +96,17 @@ func (a *API) GetSongs(c *gin.Context) {
 	songs, err := a.storage.Song().GetSongs(query)
 	if err != nil {
 		a.logger.Error(fmt.Sprintf("Trouble with connecting to DB (table %s): %s", os.Getenv("TABLE_NAME"), err))
-		c.JSON(http.StatusInternalServerError, ResponceMessage{"Server error. Try later"})
+		c.JSON(http.StatusInternalServerError, serverError)
+		return
+	}
+	if len(songs) == 0 {
+		a.logger.Info(fmt.Sprintf("No found songs in DB (table %s)", os.Getenv("TABLE_NAME")))
+		c.JSON(http.StatusNotFound, errorNotFoundMessage{"No found songs"})
 		return
 	}
 
-	// Возвращаем пользователю сообщение об успешно выполненной операции (Текст песни по сути будет преобразован в читаемый вид на стороне фронта)
-	c.JSON(http.StatusOK, ResponceAllSongs{Songs: songs})
+	// Возвращаем пользователю сообщение об успешно выполненной операции (предполагается, что текст песен будет преобразован в читаемый вид на стороне фронта)
+	c.JSON(http.StatusOK, responceAllSongs{Songs: songs})
 
 	// Логируем окончание запроса
 	a.logger.Info("Request 'Get: GetSongs api/songs' successfully done")

@@ -8,12 +8,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// @title Music Library
-// @version 1.0
+//	@title			Music Library
+//	@version		1.0
+//	@description	This is a sample server provided CRUD features
 
-// @license.url https://github.com/MartinHeinz/go-project-blueprint/blob/master/LICENSE
-
-// @BasePath /api
+//	@host		localhost:8080
+//	@BasePath	/api
 
 func init() {
 	// Считываем переменные окружения

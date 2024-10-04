@@ -1,0 +1,342 @@
+openapi: 3.0.3
+info:
+  title: Music Library
+  description:
+    This is a sample server provided CRUD features.
+  version: "1.0"
+servers:
+  - url: localhost:8080/api
+tags:
+  - name: song
+    description: Operations with songs
+paths:
+  /song:
+    put:
+      tags:
+        - song
+      summary: UpdateSong
+      description: Update song
+      parameters:
+        - name: group
+          in: query
+          description: The artist
+          required: true
+          schema:
+            type: string
+        - name: song
+          in: query
+          description: Name of song
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: New info about song
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/requestBodySong'
+        required: true
+      responses:
+        '200':
+          description: Song successfully update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responceMessage'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '404':
+          description: Song not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorNotFoundMessage'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorServerMessage'
+    delete:
+      tags:
+        - song
+      summary: DeleteSong
+      description: Delete song
+      parameters:
+        - name: group
+          in: query
+          description: The artist
+          required: true
+          schema:
+            type: string
+        - name: song
+          in: query
+          description: Name of song
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Song successfully delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responceMessage'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '404':
+          description: Song not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorNotFoundMessage'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorServerMessage'
+    post:
+      tags:
+        - song
+      summary: AddSong
+      description: Add a new song
+      requestBody:
+        description: Info about song
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/requestBodySong'
+        required: true
+      responses:
+        '201':
+          description: Song successfully add
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responceMessage'
+        '400':
+          description: Bad request 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorServerMessage'
+  /song/text:
+    get:
+      tags:
+        - song
+      summary: GetSongText
+      description: Retrieve song's text in verses
+      parameters:
+        - name: group
+          in: query
+          description: The artist
+          required: true
+          schema:
+            type: string
+        - name: song
+          in: query
+          description: Name of song
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          description: Offset on verses from the beginning of the song
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Limit of verses
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Text of song successfully recieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responceTextSong'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '404':
+          description: Song not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorNotFoundMessage'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorServerMessage'
+  /songs:
+    get:
+      tags:
+        - song
+      summary: GetSongs
+      description: Retrieve songs
+      parameters:
+        - name: offset
+          in: query
+          description: Offset from the beginning of the list extracted songs
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Limit of quantity extracted songs
+          required: true
+          schema:
+            type: integer
+        - name: group
+          in: query
+          description: The artist
+          required: false
+          schema:
+            type: string
+        - name: song
+          in: query
+          description: Name of song
+          required: false
+          schema:
+            type: string
+        - name: releaseDate
+          in: query
+          description: Release date of song
+          required: false
+          schema:
+            type: string
+        - name: text
+          in: query
+          description: Words in text of song
+          required: false
+          schema:
+            type: string
+        - name: link
+          in: query
+          description: Link on youtube
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Songs successfully recieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responceAllSongs'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '404':
+          description: Songs not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorNotFoundMessage'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorServerMessage'
+components:
+  schemas:
+    song:
+      type: object
+      properties:
+        group:
+          type: string
+          example: nirvana
+        song:
+          type: string
+          example: smells like teen spirit
+        releaseDate:
+          type: string
+          example: 01.01.1990
+        text:
+          type: array
+          example: [
+            "Load up on guns, bring your friends\nIt's fun to lose and to pretend\nShe's over-bored and self-assured\nOh no, I know a dirty word,"
+            ,
+            "Hello, hello, hello, how low\nHello, hello, hello, how low\nHello, hello, hello, how low\nHello, hello, hello"
+            ]
+        link:
+          type: string
+          example: https://www.youtube.com/watch?v=hTWKbfoikeg
+    requestBodySong:
+      type: object
+      properties:
+        group:
+          type: string
+          example: Nirvana
+        song:
+          type: string
+          example: Smells Like Teen Spirit
+    responceMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Song successfully delete. Group: nirvana, song: smells like teen spirit'
+    responceTextSong:
+      type: object
+      properties:
+        verses:
+          type: array
+          example: [
+            "Load up on guns, bring your friends\nIt's fun to lose and to pretend\nShe's over-bored and self-assured\nOh no, I know a dirty word,"
+            ,
+            "Hello, hello, hello, how low\nHello, hello, hello, how low\nHello, hello, hello, how low\nHello, hello, hello"
+            ]
+    responceAllSongs:
+      type: object
+      properties:
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/song'
+    errorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'URL have uncorrected parameters in the query string: group and song value must be not empty'
+    errorNotFoundMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: You trying to delete non existed song
+    errorServerMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Server error. Try later
+    
